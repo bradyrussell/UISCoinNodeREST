@@ -1,13 +1,14 @@
 package com.bradyrussell.uiscoin.controller;
 
+import com.bradyrussell.uiscoin.BytesUtil;
 import com.bradyrussell.uiscoin.UISCoinContext;
+import com.bradyrussell.uiscoin.UISCoinUtil;
+import com.bradyrussell.uiscoin.address.UISCoinAddress;
 import com.bradyrussell.uiscoin.block.Block;
 import com.bradyrussell.uiscoin.blockchain.BlockChain;
 import com.bradyrussell.uiscoin.blockchain.exception.NoSuchBlockException;
 import com.bradyrussell.uiscoin.blockchain.exception.NoSuchTransactionException;
-import com.bradyrussell.uiscoin.data.BooleanSuccessResult;
-import com.bradyrussell.uiscoin.data.NodeStatus;
-import com.bradyrussell.uiscoin.data.PeerList;
+import com.bradyrussell.uiscoin.data.*;
 import com.bradyrussell.uiscoin.transaction.Transaction;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -17,7 +18,6 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
@@ -100,10 +100,31 @@ public class NodeRestController {
     }
 
     @GetMapping(value = {"/mempool"})
-    public List<Transaction> mempool() {
+    public MemPoolList mempool() {
         if (UISCoinContext.getNode() != null) {
-            return BlockChain.get().getMempool();
+            return new MemPoolList(BlockChain.get().getMempool());
         }
         throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Not initialized!");
     }
+
+    @GetMapping(value = {"/script"})
+    public ScriptTypeMessage script(@RequestParam(value = "script") String script) {
+        if (UISCoinContext.getNode() != null) {
+            String scriptDescription = UISCoinUtil.getScriptDescription(Base64.getUrlDecoder().decode(script));
+            return new ScriptTypeMessage(scriptDescription == null ? "Unknown script!":scriptDescription);
+        }
+        throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Not initialized!");
+    }
+
+    @GetMapping(value = {"/unspent"})
+    public UTXOs unspent(@RequestParam(value = "address") String address) {
+        if (UISCoinContext.getNode() != null) {
+            if(!UISCoinAddress.verifyAddressChecksum(BytesUtil.Base64Decode(address))) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid P2PKH address!");
+            byte[] publicKeyHash = UISCoinAddress.decodeAddress(BytesUtil.Base64Decode(address)).HashData;
+            return new UTXOs(BlockChain.get().matchUTXOForP2PKHAddress(publicKeyHash));
+        }
+        throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Not initialized!");
+    }
+
+
 }
