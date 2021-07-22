@@ -1,19 +1,23 @@
 package com.bradyrussell.uiscoin.controller;
 
 import com.bradyrussell.uiscoin.UISCoinContext;
+import com.bradyrussell.uiscoin.block.Block;
 import com.bradyrussell.uiscoin.blockchain.BlockChain;
+import com.bradyrussell.uiscoin.blockchain.exception.NoSuchBlockException;
+import com.bradyrussell.uiscoin.blockchain.exception.NoSuchTransactionException;
 import com.bradyrussell.uiscoin.data.BooleanSuccessResult;
 import com.bradyrussell.uiscoin.data.NodeStatus;
 import com.bradyrussell.uiscoin.data.PeerList;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import com.bradyrussell.uiscoin.transaction.Transaction;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.Base64;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
@@ -61,5 +65,45 @@ public class NodeRestController {
             return new BooleanSuccessResult(true);
         }
         return new BooleanSuccessResult(false);
+    }
+
+    @GetMapping(value = {"/block"})
+    public Block block(@RequestParam(value = "blockHash", required = false) String blockHash, @RequestParam(value = "blockHeight", required = false) Integer blockHeight) {
+        if (UISCoinContext.getNode() != null) {
+            if(blockHash != null) {
+                try {
+                    return BlockChain.get().getBlock(Base64.getUrlDecoder().decode(blockHash));
+                } catch (NoSuchBlockException e) {
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+                }
+            } else if(blockHeight != null){
+                try {
+                    return BlockChain.get().getBlockByHeight(blockHeight);
+                } catch (NoSuchBlockException e) {
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+                }
+            }
+        }
+        throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Not initialized!");
+    }
+
+    @GetMapping(value = {"/transaction"})
+    public Transaction transaction(@RequestParam(value = "transactionHash") String transactionHash) {
+        if (UISCoinContext.getNode() != null) {
+            try {
+                return BlockChain.get().getTransaction(Base64.getUrlDecoder().decode(transactionHash));
+            } catch (NoSuchTransactionException | NoSuchBlockException e) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+            }
+        }
+        throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Not initialized!");
+    }
+
+    @GetMapping(value = {"/mempool"})
+    public List<Transaction> mempool() {
+        if (UISCoinContext.getNode() != null) {
+            return BlockChain.get().getMempool();
+        }
+        throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Not initialized!");
     }
 }
