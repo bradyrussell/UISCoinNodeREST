@@ -4,6 +4,8 @@ import com.bradyrussell.uiscoin.BytesUtil;
 import com.bradyrussell.uiscoin.UISCoinContext;
 import com.bradyrussell.uiscoin.UISCoinUtil;
 import com.bradyrussell.uiscoin.address.UISCoinAddress;
+import com.bradyrussell.uiscoin.address.UISCoinKeypair;
+import com.bradyrussell.uiscoin.address.UISCoinWallet;
 import com.bradyrussell.uiscoin.block.Block;
 import com.bradyrussell.uiscoin.blockchain.BlockChain;
 import com.bradyrussell.uiscoin.blockchain.exception.NoSuchBlockException;
@@ -119,12 +121,15 @@ public class NodeRestController {
     @GetMapping(value = {"/unspent"})
     public UTXOs unspent(@RequestParam(value = "address") String address) {
         if (UISCoinContext.getNode() != null) {
-            if(!UISCoinAddress.verifyAddressChecksum(BytesUtil.Base64Decode(address))) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid P2PKH address!");
+            if(!UISCoinAddress.verifyAddressChecksum(BytesUtil.Base64Decode(address))) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Invalid P2PKH address!");
             byte[] publicKeyHash = UISCoinAddress.decodeAddress(BytesUtil.Base64Decode(address)).HashData;
             return new UTXOs(BlockChain.get().matchUTXOForP2PKHAddress(publicKeyHash));
         }
         throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Not initialized!");
     }
 
-
+    @GetMapping(value = {"/keypair"})
+    public NewKeypairResponse keypair() {
+        return new NewKeypairResponse(UISCoinKeypair.Create());
+    }
 }
