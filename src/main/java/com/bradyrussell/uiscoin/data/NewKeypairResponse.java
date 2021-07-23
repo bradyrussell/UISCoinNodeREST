@@ -9,20 +9,12 @@ import java.util.Base64;
 public class NewKeypairResponse {
     private UISCoinKeypair keypair;
 
-    public byte[] getPublicKey() {
-        return keypair.Keys.getPublic().getEncoded();
+    public byte[] getKeypair() {
+        return keypair.getBinaryData();
     }
 
     public String getAddress() {
         return Base64.getUrlEncoder().encodeToString(UISCoinAddress.fromPublicKey((ECPublicKey) keypair.Keys.getPublic()));
-    }
-
-    public byte[] getPrivateKey() {
-        return keypair.Keys.getPrivate().getEncoded();
-    }
-
-    public byte[] getSeed() {
-        return keypair.Seed;
     }
 
     public NewKeypairResponse(UISCoinKeypair keypair) {
