@@ -136,6 +136,17 @@ public class NodeRestController {
         return new NewKeypairResponse(UISCoinKeypair.Create());
     }
 
+    @PostMapping(value = {"/keypair"})
+    public NewKeypairResponse keypairPost(@RequestParam(value = "keypair") String keypair) {
+        try {
+            UISCoinKeypair uisCoinKeypair = new UISCoinKeypair();
+            uisCoinKeypair.setBinaryData(Base64.getUrlDecoder().decode(keypair));
+            return new NewKeypairResponse(uisCoinKeypair);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.toString());
+        }
+    }
+
     @GetMapping(value = {"/difficulty"})
     public DifficultyResponse difficulty() {
         try {
