@@ -19,6 +19,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.file.Files;
 import java.security.interfaces.ECPublicKey;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -137,10 +138,15 @@ public class NodeRestController {
     }
 
     @PostMapping(value = {"/keypair"})
-    public NewKeypairResponse keypairPost(@RequestParam(value = "keypair") String keypair) {
+    public NewKeypairResponse keypairPost(@RequestParam(value = "keypair") String keypair, @RequestParam(value = "password", required = false) String password) {
         try {
             UISCoinKeypair uisCoinKeypair = new UISCoinKeypair();
-            uisCoinKeypair.setBinaryData(Base64.getUrlDecoder().decode(keypair));
+            byte[] data = Base64.getUrlDecoder().decode(keypair);
+            if(password == null) {
+                uisCoinKeypair.setBinaryData(data);
+            } else {
+                uisCoinKeypair.setBinaryData(Encryption.Decrypt(data, Hash.getSHA512Bytes(password)));
+            }
             return new NewKeypairResponse(uisCoinKeypair);
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.toString());
