@@ -2,7 +2,9 @@ package com.bradyrussell.uiscoin.storage;
 
 import com.bradyrussell.uiscoin.blockchain.BlockChainStorageBase;
 import com.bradyrussell.uiscoin.transaction.Transaction;
+import com.mchange.v2.c3p0.ComboPooledDataSource;
 
+import java.beans.PropertyVetoException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.sql.*;
@@ -20,6 +22,8 @@ public class BlockchainStorageSQL extends BlockChainStorageBase {
     private final String password;
     private ArrayList<Transaction> mempool = null;
     private final HashSet<String> tablesCache = new HashSet<>();
+
+    private ComboPooledDataSource dataSource = null;
 
     public BlockchainStorageSQL(String database, String username, String password) {
         this.type = "jdbc:mysql";
@@ -50,7 +54,7 @@ public class BlockchainStorageSQL extends BlockChainStorageBase {
 
     private Connection getConnection() {
         try {
-            return DriverManager.getConnection(type+"://"+server+":"+port+"/"+database+"?user="+username+"&password="+password+"");
+            return dataSource.getConnection();
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }
@@ -62,12 +66,14 @@ public class BlockchainStorageSQL extends BlockChainStorageBase {
         try {
             mempool = new ArrayList<>();
             tablesCache.clear();
-            Connection connection = getConnection();
-            if (connection != null) {
-                connection.close();
-                return true;
-            }
-        } catch (SQLException e) {
+
+            dataSource = new ComboPooledDataSource();
+            dataSource.setDriverClass("com.mysql.cj.jdbc.Driver");
+            dataSource.setJdbcUrl(type+"://"+server+":"+port+"/"+database);
+            dataSource.setUser(username);
+            dataSource.setPassword(password);
+            return true;
+        } catch (PropertyVetoException e) {
             e.printStackTrace();
         }
         return false;
@@ -77,6 +83,8 @@ public class BlockchainStorageSQL extends BlockChainStorageBase {
     public void close() {
         mempool = null;
         tablesCache.clear();
+        dataSource.close();
+        dataSource = null;
     }
 
     @Override
@@ -127,8 +135,8 @@ public class BlockchainStorageSQL extends BlockChainStorageBase {
         try {
             PreparedStatement statement = connection.prepareStatement("INSERT into uiscoin." + s + " VALUES(?, ?) ON DUPLICATE KEY UPDATE uiscoin_value = ?;");
             statement.setString(1, Base64.getEncoder().encodeToString(bytes));
-            statement.setBinaryStream(2, new ByteArrayInputStream(bytes1));
-            statement.setBinaryStream(3, new ByteArrayInputStream(bytes1));
+            statement.setBlob(2, new ByteArrayInputStream(bytes1));
+            statement.setBlob(3, new ByteArrayInputStream(bytes1));
             statement.execute();
         } catch (SQLException e) {
             e.printStackTrace();
