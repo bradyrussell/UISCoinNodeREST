@@ -157,6 +157,15 @@ public class NodeRestController {
         }
     }
 
+    @RequestMapping(value = {"/exportkeypair"})
+    public ExportedKeypairResponse exportKeypair(@RequestParam(value = "keypair") String keypair, @RequestParam(value = "password") String password) {
+        try {
+            return new ExportedKeypairResponse(Base64.getUrlEncoder().encodeToString(Encryption.Encrypt(Base64.getUrlDecoder().decode(keypair), Hash.getSHA512Bytes(password))));
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.toString());
+        }
+    }
+
     @GetMapping(value = {"/difficulty"})
     public DifficultyResponse difficulty() {
         try {
