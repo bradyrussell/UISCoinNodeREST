@@ -169,41 +169,26 @@ public class NodeRestController {
         throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Not initialized!");
     }
 
-    @RequestMapping(value = {"/send"})
-    public TransactionHashResult send(@RequestParam(value = "memo", required = false) String memo, @RequestParam(value = "keypair") String keypairString, @RequestParam(value = "recipient") String recipientAddress, @RequestParam(value = "fee") long fee, @RequestParam(value = "amount") long amount) {
-        if (UISCoinContext.getNode() != null) {
+    @PostMapping(value = {"/balance"})
+    public BalanceResult balance(@RequestBody BalanceData balanceData) {
+        ArrayList<UISCoinKeypair> keypairs = new ArrayList<>();
 
-            UISCoinKeypair keypair = new UISCoinKeypair();
-            keypair.setBinaryData(Base64.getUrlDecoder().decode(keypairString));
-
-            TransactionOutputBuilder outputBuilder = new TransactionOutputBuilder()
-                    .setPayToPublicKeyHash(UISCoinAddress.decodeAddress(Base64.getUrlDecoder().decode(recipientAddress)).HashData)
-                    .setAmount(amount);
-
-            if(memo != null) {
-                outputBuilder.setMemo(memo);
-            }
-
+        for (String keypair : balanceData.getKeypairs()) {
             try {
-                Transaction transaction = new TransactionBuilder()
-                        .setVersion(MagicBytes.ProtocolVersion.Value)
-                        .addOutput(outputBuilder.get())
-                        .addInputsFromAllP2pkhUtxo(keypair)
-                        .addChangeOutputToPublicKeyHash(UISCoinAddress.decodeAddress(UISCoinAddress.fromPublicKey((ECPublicKey) keypair.Keys.getPublic())).HashData, fee)
-                        .get();
-
-                if(transaction.Verify()) UISCoinContext.getNode().BroadcastTransactionToPeers(transaction);
-                return new TransactionHashResult(Base64.getUrlEncoder().encodeToString(transaction.getHash()));
-            } catch (NoSuchTransactionException | NoSuchBlockException e) {
+                UISCoinKeypair uisCoinKeypair = new UISCoinKeypair();
+                uisCoinKeypair.setBinaryData(Base64.getUrlDecoder().decode(keypair));
+                keypairs.add(uisCoinKeypair);
+            } catch (Exception e) {
                 e.printStackTrace();
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+                // ignore
             }
         }
-        throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Not initialized!");
+
+        return new BalanceResult(UISCoinHelper.getBalanceForKeypairs(keypairs));
     }
 
-    @PostMapping(value = {"/send2"})
-    public TransactionHashResult send2(@RequestBody SendData sendData) {
+    @PostMapping(value = {"/send"})
+    public TransactionHashResult send(@RequestBody SendData sendData) {
         if(!UISCoinAddress.verifyAddressChecksum(Base64.getUrlDecoder().decode(sendData.getRecipient()))) throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE, "Invalid address!");
 
         ArrayList<UISCoinKeypair> keypairs = new ArrayList<>();
