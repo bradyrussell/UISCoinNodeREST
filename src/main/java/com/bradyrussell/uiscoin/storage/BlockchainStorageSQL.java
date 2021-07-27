@@ -18,8 +18,6 @@ public class BlockchainStorageSQL extends BlockChainStorageBase {
     private final String database;
     private final String username;
     private final String password;
-
-    private Connection connection = null;
     private ArrayList<Transaction> mempool = null;
     private final HashSet<String> tablesCache = new HashSet<>();
 
@@ -50,28 +48,35 @@ public class BlockchainStorageSQL extends BlockChainStorageBase {
         this.password = password;
     }
 
+    private Connection getConnection() {
+        try {
+            return DriverManager.getConnection(type+"://"+server+":"+port+"/"+database+"?user="+username+"&password="+password+"");
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+        }
+        return null;
+    }
+
     @Override
     public boolean open() {
         try {
             mempool = new ArrayList<>();
             tablesCache.clear();
-            connection = DriverManager.getConnection(type+"://"+server+":"+port+"/"+database+"?user="+username+"&password="+password);
-            return connection != null;
+            Connection connection = getConnection();
+            if (connection != null) {
+                connection.close();
+                return true;
+            }
         } catch (SQLException e) {
             e.printStackTrace();
-            return false;
         }
+        return false;
     }
 
     @Override
     public void close() {
-        try {
-            mempool = null;
-            tablesCache.clear();
-            connection.close();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        mempool = null;
+        tablesCache.clear();
     }
 
     @Override
@@ -91,7 +96,9 @@ public class BlockchainStorageSQL extends BlockChainStorageBase {
 
     @Override
     public byte[] get(byte[] bytes, String s) {
-        createTableIfNotExists(s);
+        Connection connection = getConnection();
+        if(connection == null) return null;
+        createTableIfNotExists(s, connection);
         try {
             PreparedStatement statement = connection.prepareStatement("SELECT uiscoin_value FROM uiscoin." + s + " WHERE uiscoin_key = ?;");
             statement.setString(1, Base64.getEncoder().encodeToString(bytes));
@@ -102,13 +109,21 @@ public class BlockchainStorageSQL extends BlockChainStorageBase {
             }
         } catch (SQLException | IOException e) {
             e.printStackTrace();
+        } finally {
+            try {
+                connection.close();
+            } catch (SQLException throwables) {
+                throwables.printStackTrace();
+            }
         }
         return null;
     }
 
     @Override
     public void put(byte[] bytes, byte[] bytes1, String s) {
-        createTableIfNotExists(s);
+        Connection connection = getConnection();
+        if(connection == null) return;
+        createTableIfNotExists(s, connection);
         try {
             PreparedStatement statement = connection.prepareStatement("INSERT into uiscoin." + s + " VALUES(?, ?) ON DUPLICATE KEY UPDATE uiscoin_value = ?;");
             statement.setString(1, Base64.getEncoder().encodeToString(bytes));
@@ -117,24 +132,40 @@ public class BlockchainStorageSQL extends BlockChainStorageBase {
             statement.execute();
         } catch (SQLException e) {
             e.printStackTrace();
+        } finally {
+            try {
+                connection.close();
+            } catch (SQLException throwables) {
+                throwables.printStackTrace();
+            }
         }
     }
 
     @Override
     public void remove(byte[] bytes, String s) {
-        createTableIfNotExists(s);
+        Connection connection = getConnection();
+        if(connection == null) return;
+        createTableIfNotExists(s, connection);
         try {
             PreparedStatement statement = connection.prepareStatement("DELETE from uiscoin." + s + " WHERE uiscoin_key = ?;");
             statement.setString(1, Base64.getEncoder().encodeToString(bytes));
             statement.execute();
         } catch (SQLException e) {
             e.printStackTrace();
+        } finally {
+            try {
+                connection.close();
+            } catch (SQLException throwables) {
+                throwables.printStackTrace();
+            }
         }
     }
 
     @Override
     public boolean exists(byte[] bytes, String s) {
-        createTableIfNotExists(s);
+        Connection connection = getConnection();
+        if(connection == null) return false;
+        createTableIfNotExists(s, connection);
         try {
             PreparedStatement statement = connection.prepareStatement("SELECT COUNT(uiscoin_value) FROM uiscoin." + s + " WHERE uiscoin_key = ?;");
             statement.setString(1, Base64.getEncoder().encodeToString(bytes));
@@ -144,13 +175,21 @@ public class BlockchainStorageSQL extends BlockChainStorageBase {
             }
         } catch (SQLException e) {
             e.printStackTrace();
+        } finally {
+            try {
+                connection.close();
+            } catch (SQLException throwables) {
+                throwables.printStackTrace();
+            }
         }
         return false;
     }
 
     @Override
     public List<byte[]> keys(String s) {
-        createTableIfNotExists(s);
+        Connection connection = getConnection();
+        if(connection == null) return null;
+        createTableIfNotExists(s, connection);
         try {
             PreparedStatement statement = connection.prepareStatement("SELECT uiscoin_key FROM uiscoin." + s + ";");
             ResultSet resultSet = statement.executeQuery();
@@ -163,12 +202,18 @@ public class BlockchainStorageSQL extends BlockChainStorageBase {
             return keySet;
         } catch (SQLException e) {
             e.printStackTrace();
+        } finally {
+            try {
+                connection.close();
+            } catch (SQLException throwables) {
+                throwables.printStackTrace();
+            }
         }
         return null;
     }
 
     // returns whether a new table was created
-    public boolean createTableIfNotExists(String tableName){
+    public boolean createTableIfNotExists(String tableName, Connection connection){
         if(tablesCache.contains(tableName)) return false;
         try {
             // cannot prepare table names...
