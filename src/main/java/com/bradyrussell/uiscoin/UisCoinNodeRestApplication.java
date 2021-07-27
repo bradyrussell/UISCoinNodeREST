@@ -12,6 +12,9 @@ import org.springframework.boot.autoconfigure.jackson.Jackson2ObjectMapperBuilde
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+
 @SpringBootApplication
 public class UisCoinNodeRestApplication {
 
@@ -27,5 +30,15 @@ public class UisCoinNodeRestApplication {
                 .disable(MapperFeature.DEFAULT_VIEW_INCLUSION)
                 .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+    }
+
+    @PostConstruct
+    public void openOnInit() {
+        UISCoinContext.start();
+    }
+
+    @PreDestroy
+    public void closeOnExit() {
+        UISCoinContext.stop();
     }
 }

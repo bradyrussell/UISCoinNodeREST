@@ -34,16 +34,6 @@ public class NodeRestController {
         return new NodeStatus(running, peers > 0, peers, running ? BlockChain.get().BlockHeight : -1);
     }
 
-    @GetMapping(value = {"/start"})
-    public BooleanSuccessResult start() {
-        return new BooleanSuccessResult(UISCoinContext.start());
-    }
-
-    @GetMapping(value = {"/stop"})
-    public BooleanSuccessResult stop() {
-        return new BooleanSuccessResult(UISCoinContext.stop());
-    }
-
     @GetMapping(value = {"/peers"})
     public PeerList peers() {
         return new PeerList(UISCoinContext.getNode().getPeers().stream().map((InetAddress::getHostAddress)).collect(Collectors.toCollection(ArrayList::new)));
@@ -61,15 +51,6 @@ public class NodeRestController {
             }
         }
         return new PeerList(UISCoinContext.getNode().getPeers().stream().map((InetAddress::getHostAddress)).collect(Collectors.toCollection(ArrayList::new))); // will not contain new peers as connection is async
-    }
-
-    @GetMapping(value = {"/retrypeers"})
-    public BooleanSuccessResult reconnect() {
-        if (UISCoinContext.getNode() != null) {
-            UISCoinContext.getNode().RetryPeers();
-            return new BooleanSuccessResult(true);
-        }
-        return new BooleanSuccessResult(false);
     }
 
     @GetMapping(value = {"/block"})
@@ -160,7 +141,11 @@ public class NodeRestController {
     @RequestMapping(value = {"/exportkeypair"})
     public ExportedKeypairResponse exportKeypair(@RequestParam(value = "keypair") String keypair, @RequestParam(value = "password") String password) {
         try {
-            return new ExportedKeypairResponse(Base64.getUrlEncoder().encodeToString(Encryption.Encrypt(Base64.getUrlDecoder().decode(keypair), Hash.getSHA512Bytes(password))));
+            UISCoinKeypair uisCoinKeypair = new UISCoinKeypair();
+            byte[] data = Base64.getUrlDecoder().decode(keypair);
+            uisCoinKeypair.setBinaryData(data);
+
+            return new ExportedKeypairResponse(Base64.getUrlEncoder().encodeToString(Encryption.Encrypt(uisCoinKeypair.getBinaryData(), Hash.getSHA512Bytes(password))));
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.toString());
         }
