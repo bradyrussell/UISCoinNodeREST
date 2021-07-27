@@ -24,6 +24,8 @@ import java.security.interfaces.ECPublicKey;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -190,6 +192,55 @@ public class NodeRestController {
 
                 if(transaction.Verify()) UISCoinContext.getNode().BroadcastTransactionToPeers(transaction);
                 return new TransactionHashResult(Base64.getUrlEncoder().encodeToString(transaction.getHash()));
+            } catch (NoSuchTransactionException | NoSuchBlockException e) {
+                e.printStackTrace();
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+            }
+        }
+        throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Not initialized!");
+    }
+
+    @PostMapping(value = {"/send2"})
+    public TransactionHashResult send2(@RequestBody SendData sendData) {
+        if(!UISCoinAddress.verifyAddressChecksum(Base64.getUrlDecoder().decode(sendData.getRecipient()))) throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE, "Invalid address!");
+
+        ArrayList<UISCoinKeypair> keypairs = new ArrayList<>();
+
+        for (String keypair : sendData.getKeypairs()) {
+            try {
+                UISCoinKeypair uisCoinKeypair = new UISCoinKeypair();
+                uisCoinKeypair.setBinaryData(Base64.getUrlDecoder().decode(keypair));
+                keypairs.add(uisCoinKeypair);
+            } catch (Exception e){
+                e.printStackTrace();
+                // ignore
+            }
+        }
+
+        if (UISCoinContext.getNode() != null) {
+            TransactionOutputBuilder outputBuilder = new TransactionOutputBuilder()
+                    .setPayToPublicKeyHash(UISCoinAddress.decodeAddress(Base64.getUrlDecoder().decode(sendData.getRecipient())).HashData)
+                    .setAmount(sendData.getAmount());
+
+            if(sendData.getMemo() != null && !sendData.getMemo().isBlank()) {
+                outputBuilder.setMemo(sendData.getMemo());
+            }
+
+            try {
+                Transaction transaction = new TransactionBuilder()
+                        .setVersion(MagicBytes.ProtocolVersion.Value)
+                        .addOutput(outputBuilder.get())
+                        .addInputsFromMultipleKeypairsP2pkh(keypairs, sendData.getAmount()+sendData.getFee())
+                        .addChangeOutputToPublicKeyHash(UISCoinAddress.decodeAddress(UISCoinAddress.fromPublicKey((ECPublicKey) keypairs.get(0).Keys.getPublic())).HashData, sendData.getFee())
+                        .get();
+
+                if(transaction.Verify()) {
+                    UISCoinContext.getNode().BroadcastTransactionToPeers(transaction);
+                    return new TransactionHashResult(Base64.getUrlEncoder().encodeToString(transaction.getHash()));
+                } else {
+                    throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED, "Transaction verification failed!");
+                }
+
             } catch (NoSuchTransactionException | NoSuchBlockException e) {
                 e.printStackTrace();
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());

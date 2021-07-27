@@ -21,7 +21,7 @@ public class BlockchainStorageSQL extends BlockChainStorageBase {
 
     private Connection connection = null;
     private ArrayList<Transaction> mempool = null;
-    private HashSet<String> tablesCache = null;
+    private final HashSet<String> tablesCache = new HashSet<>();
 
     public BlockchainStorageSQL(String database, String username, String password) {
         this.type = "jdbc:mysql";
@@ -54,7 +54,7 @@ public class BlockchainStorageSQL extends BlockChainStorageBase {
     public boolean open() {
         try {
             mempool = new ArrayList<>();
-            tablesCache = new HashSet<>();
+            tablesCache.clear();
             connection = DriverManager.getConnection(type+"://"+server+":"+port+"/"+database+"?user="+username+"&password="+password);
             return connection != null;
         } catch (SQLException e) {
@@ -67,7 +67,7 @@ public class BlockchainStorageSQL extends BlockChainStorageBase {
     public void close() {
         try {
             mempool = null;
-            tablesCache = null;
+            tablesCache.clear();
             connection.close();
         } catch (SQLException e) {
             e.printStackTrace();
