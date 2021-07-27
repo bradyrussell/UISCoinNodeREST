@@ -4,7 +4,6 @@ import com.bradyrussell.uiscoin.*;
 import com.bradyrussell.uiscoin.address.UISCoinAddress;
 import com.bradyrussell.uiscoin.address.UISCoinKeypair;
 import com.bradyrussell.uiscoin.block.Block;
-import com.bradyrussell.uiscoin.block.BlockBuilder;
 import com.bradyrussell.uiscoin.block.BlockHeader;
 import com.bradyrussell.uiscoin.blockchain.BlockChain;
 import com.bradyrussell.uiscoin.blockchain.exception.NoSuchBlockException;
@@ -19,13 +18,11 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.nio.file.Files;
 import java.security.interfaces.ECPublicKey;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.List;
-import java.util.Map;
+import java.util.HashMap;
 import java.util.stream.Collectors;
 
 @RestController
@@ -108,9 +105,14 @@ public class NodeRestController {
     }
 
     @GetMapping(value = {"/mempool"})
-    public MemPoolList mempool() {
+    public MemPoolMap mempool() {
         if (UISCoinContext.getNode() != null) {
-            return new MemPoolList(BlockChain.get().getMempool());
+            HashMap<String, Transaction> mempool = new HashMap<>();
+            for (Transaction transaction : BlockChain.get().getMempool()) {
+                mempool.put(Base64.getUrlEncoder().encodeToString(transaction.getHash()), transaction);
+            }
+
+            return new MemPoolMap(mempool);
         }
         throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Not initialized!");
     }
