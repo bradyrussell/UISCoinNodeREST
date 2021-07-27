@@ -171,20 +171,23 @@ public class NodeRestController {
 
     @PostMapping(value = {"/balance"})
     public BalanceResult balance(@RequestBody BalanceData balanceData) {
-        ArrayList<UISCoinKeypair> keypairs = new ArrayList<>();
+        if (UISCoinContext.getNode() != null) {
+            ArrayList<UISCoinKeypair> keypairs = new ArrayList<>();
 
-        for (String keypair : balanceData.getKeypairs()) {
-            try {
-                UISCoinKeypair uisCoinKeypair = new UISCoinKeypair();
-                uisCoinKeypair.setBinaryData(Base64.getUrlDecoder().decode(keypair));
-                keypairs.add(uisCoinKeypair);
-            } catch (Exception e) {
-                e.printStackTrace();
-                // ignore
+            for (String keypair : balanceData.getKeypairs()) {
+                try {
+                    UISCoinKeypair uisCoinKeypair = new UISCoinKeypair();
+                    uisCoinKeypair.setBinaryData(Base64.getUrlDecoder().decode(keypair));
+                    keypairs.add(uisCoinKeypair);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    // ignore
+                }
             }
-        }
 
-        return new BalanceResult(UISCoinHelper.getBalanceForKeypairs(keypairs));
+            return new BalanceResult(UISCoinHelper.getBalanceForKeypairs(keypairs));
+        }
+        throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Not initialized!");
     }
 
     @PostMapping(value = {"/send"})
