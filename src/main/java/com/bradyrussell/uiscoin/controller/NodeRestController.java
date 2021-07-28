@@ -168,11 +168,15 @@ public class NodeRestController {
         if (UISCoinContext.getNode() != null) {
             ArrayList<UISCoinKeypair> keypairs = new ArrayList<>();
 
+
+            System.out.println("Begin checking balance");
             for (String keypair : balanceData.getKeypairs()) {
+
                 try {
                     UISCoinKeypair uisCoinKeypair = new UISCoinKeypair();
                     uisCoinKeypair.setBinaryData(Base64.getUrlDecoder().decode(keypair));
                     keypairs.add(uisCoinKeypair);
+                    System.out.println("Decoded "+Base64.getUrlEncoder().encodeToString(UISCoinAddress.fromPublicKey((ECPublicKey) uisCoinKeypair.Keys.getPublic())));
                 } catch (Exception e) {
                     e.printStackTrace();
                     // ignore

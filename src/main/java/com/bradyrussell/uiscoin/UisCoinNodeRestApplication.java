@@ -14,6 +14,10 @@ import org.springframework.context.annotation.Primary;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogManager;
+import java.util.logging.Logger;
 
 @SpringBootApplication
 public class UisCoinNodeRestApplication {
