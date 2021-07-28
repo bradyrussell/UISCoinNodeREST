@@ -1,1 +1,1 @@
-https://github.com/bradyrussell/UISCoinNodeREST/releases/download/v0.0.11/UISCoinNodeREST-0.0.1-SNAPSHOT.jar
+https://github.com/bradyrussell/UISCoinNodeREST/releases/download/v0.0.12/UISCoinNodeREST-0.0.1-SNAPSHOT.jar

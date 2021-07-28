@@ -1,6 +1,7 @@
 package com.bradyrussell.uiscoin;
 
 import com.bradyrussell.uiscoin.blockchain.BlockChain;
+import com.bradyrussell.uiscoin.blockchain.BlockChainStorageEphemeral;
 import com.bradyrussell.uiscoin.blockchain.BlockChainStorageFile;
 import com.bradyrussell.uiscoin.node.Node;
 import com.bradyrussell.uiscoin.storage.BlockchainStorageSQL;
@@ -12,7 +13,7 @@ public class UISCoinContext {
 
     public static synchronized boolean start(){
         if(node != null) return false;
-        BlockChain.Storage = new BlockchainStorageSQL("192.168.1.2",3306, "uiscoin","root", "password");//new BlockChainStorageFile();
+        BlockChain.Storage = new BlockChainStorageFile();//new BlockchainStorageSQL("192.168.1.2",3306, "uiscoin","root", "password");//new BlockChainStorageFile();
         BlockChain.get().open();
         node = new Node(1);
         node.Start();

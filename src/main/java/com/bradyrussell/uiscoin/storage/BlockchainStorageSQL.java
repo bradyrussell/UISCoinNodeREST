@@ -1,5 +1,6 @@
 package com.bradyrussell.uiscoin.storage;
 
+import com.bradyrussell.uiscoin.Hash;
 import com.bradyrussell.uiscoin.blockchain.BlockChainStorageBase;
 import com.bradyrussell.uiscoin.transaction.Transaction;
 import com.mchange.v2.c3p0.ComboPooledDataSource;
@@ -8,10 +9,8 @@ import java.beans.PropertyVetoException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.HashSet;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class BlockchainStorageSQL extends BlockChainStorageBase {
     private final String type;
@@ -20,8 +19,8 @@ public class BlockchainStorageSQL extends BlockChainStorageBase {
     private final String database;
     private final String username;
     private final String password;
-    private ArrayList<Transaction> mempool = null;
     private final HashSet<String> tablesCache = new HashSet<>();
+    private final HashMap<byte[], Transaction> mempool = new HashMap<>();
 
     private ComboPooledDataSource dataSource = null;
 
@@ -64,7 +63,7 @@ public class BlockchainStorageSQL extends BlockChainStorageBase {
     @Override
     public boolean open() {
         try {
-            mempool = new ArrayList<>();
+            mempool.clear();
             tablesCache.clear();
 
             dataSource = new ComboPooledDataSource();
@@ -81,7 +80,7 @@ public class BlockchainStorageSQL extends BlockChainStorageBase {
 
     @Override
     public void close() {
-        mempool = null;
+        mempool.clear();
         tablesCache.clear();
         dataSource.close();
         dataSource = null;
@@ -89,17 +88,17 @@ public class BlockchainStorageSQL extends BlockChainStorageBase {
 
     @Override
     public void addToMempool(Transaction transaction) {
-        mempool.add(transaction);
+        mempool.put(transaction.getHash(),transaction);
     }
 
     @Override
     public void removeFromMempool(Transaction transaction) {
-        mempool.remove(transaction);
+        mempool.remove(transaction.getHash());
     }
 
     @Override
     public List<Transaction> getMempool() {
-        return mempool;
+        return new ArrayList<>(mempool.values());
     }
 
     @Override
